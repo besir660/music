@@ -38,7 +38,12 @@ def scan_music_library(root_path):
     
     print(f"Scanning directory: {root_path} ...\n")
 
-    for root, dirs, files in os.walk(root_path):
+    # Use extended path on Windows to handle special characters and long paths
+    scan_path = os.path.abspath(root_path)
+    if os.name == 'nt' and not scan_path.startswith('\\\\?\\'):
+        scan_path = f"\\\\?\\{scan_path}"
+
+    for root, dirs, files in os.walk(scan_path, onerror=lambda e: print(f"Error accessing {e.filename}: {e}")):
         # Filter for FLAC files in the current directory
         flac_files = [f for f in files if f.lower().endswith('.flac')]
         
@@ -54,22 +59,29 @@ def scan_music_library(root_path):
             
             if res_data:
                 folder_resolutions.add(res_data)
+            else:
+                print(f"Warning: Could not read file: {f}")
 
         if not folder_resolutions:
             continue
+
+        # Remove the extended path prefix for the report
+        report_root = root
+        if report_root.startswith('\\\\?\\'):
+            report_root = report_root[4:]
 
         # Determine how to categorize this folder
         if len(folder_resolutions) == 1:
             # All files match (Standard Album)
             bits, rate = list(folder_resolutions)[0]
             res_string = format_resolution(bits, rate)
-            library_report[res_string].append(root)
+            library_report[res_string].append(report_root)
         else:
             # Files have different resolutions (Mixed Album)
             # We create a string listing all found resolutions
             res_strings = [format_resolution(b, r) for b, r in sorted(folder_resolutions)]
             mixed_key = f"Mixed Resolutions ({', '.join(res_strings)})"
-            library_report[mixed_key].append(root)
+            library_report[mixed_key].append(report_root)
 
     return library_report
 
