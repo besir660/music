@@ -73,27 +73,44 @@ def scan_music_library(root_path):
 
     return library_report
 
-def print_report(report):
+def print_report(report, output_filename=None):
+    f = None
+    if output_filename:
+        try:
+            f = open(output_filename, "w", encoding="utf-8")
+        except OSError as e:
+            print(f"Warning: Could not open file for writing: {e}")
+
+    def log(message=""):
+        print(message)
+        if f:
+            print(message, file=f)
+
     if not report:
-        print("No FLAC files found.")
+        log("No FLAC files found.")
+        if f: f.close()
         return
 
-    print("-" * 60)
-    print(f"{'RESOLUTION':<25} | {'ALBUM COUNT':<10}")
-    print("-" * 60)
+    log("-" * 60)
+    log(f"{'RESOLUTION':<25} | {'ALBUM COUNT':<10}")
+    log("-" * 60)
 
     # Sort by resolution (simple string sort, but groups similar types)
     for resolution in sorted(report.keys()):
         albums = report[resolution]
-        print(f"{resolution:<25} | {len(albums)} albums")
+        log(f"{resolution:<25} | {len(albums)} albums")
 
-    print("-" * 60)
-    print("\nDETAILED LISTING:")
+    log("-" * 60)
+    log("\nDETAILED LISTING:")
     
     for resolution in sorted(report.keys()):
-        print(f"\n=== {resolution} ===")
+        log(f"\n=== {resolution} ===")
         for album_path in sorted(report[resolution]):
-            print(f"  - {album_path}")
+            log(f"  - {album_path}")
+
+    if f:
+        f.close()
+        print(f"\nReport successfully written to: {os.path.abspath(output_filename)}")
 
 if __name__ == "__main__":
     # Configuration: Set your path here or pass it as an argument
@@ -101,6 +118,6 @@ if __name__ == "__main__":
     
     if os.path.isdir(target_directory):
         results = scan_music_library(target_directory)
-        print_report(results)
+        print_report(results, "flac_report.txt")
     else:
         print("Invalid directory path provided.")
